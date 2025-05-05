@@ -4,8 +4,18 @@ import numpy as np
 import torch
 import torch.nn as nn
 import io
+import os
 
-# 1. Define model
+from huggingface_hub import hf_hub_download
+
+# 1. Download files from Hugging Face repo if not already available
+REPO_ID = "Pujan-Dev/MNIST"
+
+model_path = hf_hub_download(repo_id=REPO_ID, filename="digits_model.pth")
+mean_path = hf_hub_download(repo_id=REPO_ID, filename="scaler_mean.npy")
+scale_path = hf_hub_download(repo_id=REPO_ID, filename="scaler_scale.npy")
+
+# 2. Define model
 class DigitClassifier(nn.Module):
     def __init__(self):
         super().__init__()
@@ -18,32 +28,27 @@ class DigitClassifier(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-# 2. Load model and scaler
+# 3. Load model and scaler
 model = DigitClassifier()
-model.load_state_dict(torch.load("digits_model.pth"))
+model.load_state_dict(torch.load(model_path, map_location=torch.device("cpu")))
 model.eval()
 
-scaler_mean = np.load("scaler_mean.npy")
-scaler_scale = np.load("scaler_scale.npy")
+scaler_mean = np.load(mean_path)
+scaler_scale = np.load(scale_path)
 
 app = FastAPI()
 
-# 3. Image preprocessing function
+# 4. Image preprocessing function
 def process_image(image: Image.Image) -> torch.Tensor:
-    image = ImageOps.grayscale(image)           # Convert to grayscale
-    image = image.resize((8, 8))                # Resize to 8x8
+    image = ImageOps.grayscale(image)
+    image = image.resize((8, 8))
     image_np = np.array(image)
-
-    # Normalize pixel range from [0-255] to [0-16] to match sklearn digits
     image_np = (image_np / 255.0) * 16.0
     image_np = image_np.reshape(1, -1)
-
-    # Apply same standard scaling as during training
     image_np = (image_np - scaler_mean) / scaler_scale
-
     return torch.tensor(image_np, dtype=torch.float32)
 
-# 4. Endpoint
+# 5. Prediction endpoint
 @app.post("/predict-image/")
 async def predict_image(file: UploadFile = File(...)):
     contents = await file.read()
@@ -59,3 +64,4 @@ async def predict_image(file: UploadFile = File(...)):
 @app.get("/")
 def index():
     return {"/docs"}
+
