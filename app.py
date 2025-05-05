@@ -55,3 +55,7 @@ async def predict_image(file: UploadFile = File(...)):
         _, predicted = torch.max(outputs, 1)
     
     return {"predicted_digit": predicted.item()}
+
+@app.get("/")
+def index():
+    return {"/docs"}
