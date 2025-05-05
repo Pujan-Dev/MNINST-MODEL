@@ -5,3 +5,4 @@ numpy
 scikit-learn
 pillow
 python-multipart
+huggingface_hub
