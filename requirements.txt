@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+torch
+numpy
+scikit-learn
+pillow
